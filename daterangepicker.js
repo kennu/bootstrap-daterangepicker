@@ -33,8 +33,8 @@
             toLabel: 'To',
             weekLabel: 'W',
             customRangeLabel: 'Custom Range',
-            daysOfWeek: Date.CultureInfo.shortestDayNames,
-            monthNames: Date.CultureInfo.monthNames,
+            daysOfWeek: Date.CultureInfo.shortestDayNames.slice(0), // create copy
+            monthNames: Date.CultureInfo.monthNames.slice(0), // create copy
             firstDay: 0
         };
 
@@ -73,6 +73,11 @@
             }
         }
 
+        var showClear = true;
+        if (hasOptions && options.showClear === false) {
+            showClear = false;
+        }
+
         var DRPTemplate = '<div class="daterangepicker dropdown-menu">' +
                 '<div class="calendar left"></div>' +
                 '<div class="calendar right"></div>' +
@@ -86,8 +91,8 @@
                       '<label for="daterangepicker_end">' + this.locale.toLabel + '</label>' +
                       '<input class="input-mini" type="text" name="daterangepicker_end" value="" disabled="disabled" />' +
                     '</div>' +
-                    '<button class="btn btn-small btn-success applyBtn" disabled="disabled">' + this.locale.applyLabel + '</button>&nbsp;' +
-                    '<button class="btn btn-small clearBtn">' + this.locale.clearLabel + '</button>' +
+                    '<button class="btn btn-success applyBtn ' + (showClear ? 'btn-small' : 'btn-block') + '" disabled="disabled">' + this.locale.applyLabel + '</button>&nbsp;' +
+                    (showClear ? '<button class="btn btn-small clearBtn">' + this.locale.clearLabel + '</button>' : '') +
                   '</div>' +
                 '</div>' +
               '</div>';
@@ -163,7 +168,10 @@
                 for (var range in this.ranges) {
                     list += '<li>' + range + '</li>';
                 }
-                list += '<li>' + this.locale.customRangeLabel + '</li>';
+                if (!options.showCalendars) {
+                    // Show Custom Range button unless calendars are already showing.
+                    list += '<li>' + this.locale.customRangeLabel + '</li>';
+                }
                 list += '</ul>';
                 this.container.find('.ranges').prepend(list);
             }
@@ -211,7 +219,7 @@
             right.removeClass('right').addClass('left');
         }
 
-        if (typeof options == 'undefined' || typeof options.ranges == 'undefined')
+        if (typeof options == 'undefined' || typeof options.ranges == 'undefined' || options.showCalendars == true)
             this.container.find('.calendar').show();
 
         if (typeof cb == 'function')
@@ -229,6 +237,7 @@
         this.container.find('.calendar').on('click', 'td.available', $.proxy(this.clickDate, this));
         this.container.find('.calendar').on('mouseenter', 'td.available', $.proxy(this.enterDate, this));
         this.container.find('.calendar').on('mouseleave', 'td.available', $.proxy(this.updateView, this));
+        this.container.find('.calendar').on('click', 'td.week', $.proxy(this.clickWeek, this));
 
         this.container.find('.ranges').on('click', 'li', $.proxy(this.clickRange, this));
         this.container.find('.ranges').on('mouseenter', 'li', $.proxy(this.enterRange, this));
@@ -448,6 +457,14 @@
             this.updateCalendars();
         },
 
+        clickWeek: function(e) {
+            this.startDate = new Date(parseInt($(e.target).attr('data-date')));
+            this.endDate = this.startDate.clone().add(6).days();
+            this.leftCalendar.month.set({ month: this.startDate.getMonth(), year: this.startDate.getFullYear() });
+            this.rightCalendar.month.set({ month: this.endDate.getMonth(), year: this.endDate.getFullYear() });
+            this.updateCalendars();
+        },
+
         clickApply: function (e) {
             this.hide();
         },
@@ -551,7 +568,7 @@
                 
                 // add week number
                 if (this.showWeekNumbers)
-                    html += '<td class="week">' + calendar[row][0].getWeek() + '</td>';
+                    html += '<td class="week" data-date="' + calendar[row][0].getTime() + '">' + calendar[row][0].getWeek() + '</td>';
                 
                 for (var col = 0; col < 7; col++) {
                     var cname = 'available ';
